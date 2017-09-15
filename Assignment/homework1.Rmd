@@ -1,0 +1,88 @@
+---
+title: "Homework 1"
+author: "Bui Le Linh"
+date: '2017-09-20'
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Question 1 (Chapter 2, #1, 8 marks)
+
+(a) Better. Since we have lots of data, flexible statistical learning method would achieve lower bias. Large n also help reduces overfitting.
+
+(b) Worst. Flexible statistical learning method would overfit, leading to high variance. 
+
+(c) Better. Since we have lots of data, flexible statistical learning method would achieve lower bias by learning non-linear relationship among predictors and achieve lower bias. Inflexible statistical learning method would underfit and high bias.
+
+(d) Worst. Flexible statistical learning method would "chase the error", leading to high variance.
+
+## Question 2 (Chapter 2, #2, 6 marks)
+
+(a) Regression because the dependent variable CEO salary is continious. We are interested in inference. n = 500, p = 3.
+
+(b) Classification because the dependen variable is binary (success/failure). We are interested in prediction. n = 20, p = 13.
+
+(c) Regression because the dependent variable % change in US dollar is continious. We are interested in prediction (and probably inference as well). n = 52, p = 3.
+
+## Question 3 (Chapter 2, #9, 8 marks)
+
+```{r}
+library(ISLR) # use install.packages("ISLR") to install
+data(Auto)
+head(Auto)
+```
+
+(a)
+```{r}
+Auto <- na.omit(Auto)
+summary(Auto)
+```
+"name" is qualitative. The remaining variables are all quantitative.
+Please note that some variables such as origin are probably quanlitative, but have been encoded using numerical values. So, R treat these variables as quantitative.
+
+(b)
+
+```{r}
+myr <- function(x) {
+  out <- range(x)
+  names(out) <- c("min","max")
+  out
+}
+apply(Auto[,1:8],MARGIN=2,FUN=myr)
+```
+
+
+(c)
+
+```{r}
+meansd <- function(x) {
+  out<-c(mean(x),sd(x))
+  names(out) <- c("mean","SD")
+  out
+}
+apply(Auto[,1:8],MARGIN=2,FUN=meansd)
+```
+
+
+(d)
+
+```{r}
+AutoSubset <- Auto[-c(10:85),]
+apply(AutoSubset[,1:8],MARGIN=2,FUN=meansd)
+```
+
+(e)
+```{r}
+pairs(Auto)
+```
+mpg seems to negatively correlated with displacement, horsepower, weight, and positively correlated with year.
+cylinder seems to be positively correlated with displacement, horsepower, weight.
+displacement seems to be positively correlated with horsepower, weight, and negatively correlated with acceleration.
+horsepower seems to be positively correlated with weight and negtatively correlated with acceleration.
+
+(f) Displacement, horsepower, weight and year would be an useful variable to predict mpg. Since the correlations between mpg and displacement, horsepower and weight are so similar, we should probably only need one of them in our model (instead of all three).
