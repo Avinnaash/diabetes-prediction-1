@@ -13,21 +13,21 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Question 1 (Chapter 2, #1, 8 marks)
 
-(a) Better. Since we have lots of data, flexible statistical learning method would achieve lower bias. Large n also help reduces overfitting.
+(a) Flexible method is probably better. Since we have lots of data, flexible statistical learning method would achieve lower bias. Large n also helps reduce overfitting.
 
-(b) Worst. Flexible statistical learning method would overfit, leading to high variance. 
+(b) Flexible method is probably worst. Flexible statistical learning method would overfit, leading to high variance. 
 
-(c) Better. Since we have lots of data, flexible statistical learning method would achieve lower bias by learning non-linear relationship among predictors and achieve lower bias. Inflexible statistical learning method would underfit and high bias.
+(c) Flexible method is probably better. Flexible statistical learning method would achieve lower bias by learning non-linear relationship among predictors. Inflexible statistical learning method would underfit and have high bias.
 
-(d) Worst. Flexible statistical learning method would "chase the error", leading to high variance.
+(d) Flexible method is probably worst. Flexible statistical learning method would "chase the error", leading to high variance.
 
 ## Question 2 (Chapter 2, #2, 6 marks)
 
-(a) Regression because the dependent variable CEO salary is continious. We are interested in inference. n = 500, p = 3.
+(a) This is Regression problem because the dependent variable CEO salary is continious. We are interested in inference. n = 500, p = 3.
 
-(b) Classification because the dependen variable is binary (success/failure). We are interested in prediction. n = 20, p = 13.
+(b) This is Classification problem because the dependen variable is binary (success/failure). We are interested in prediction. n = 20, p = 13.
 
-(c) Regression because the dependent variable % change in US dollar is continious. We are interested in prediction (and probably inference as well). n = 52, p = 3.
+(c) This is Regression problem because the dependent variable % change in US dollar is continious. We are interested in prediction (and probably inference as well). n = 52, p = 3.
 
 ## Question 3 (Chapter 2, #9, 8 marks)
 
@@ -37,15 +37,15 @@ data(Auto)
 head(Auto)
 ```
 
-(a)
+(a) Variables:
 ```{r}
 Auto <- na.omit(Auto)
 summary(Auto)
 ```
 "name" is qualitative. The remaining variables are all quantitative.
-Please note that some variables such as origin are probably quanlitative, but have been encoded using numerical values. So, R treat these variables as quantitative.
+Please note that some variables such as origin are probably quanlitative, but have been encoded using numerical values. So, R treat these variables as quantitative, unless we use factor() to indicate a variable as qualitative/categorical.
 
-(b)
+(b) Range of quantitative variables:
 
 ```{r}
 myr <- function(x) {
@@ -57,7 +57,7 @@ apply(Auto[,1:8],MARGIN=2,FUN=myr)
 ```
 
 
-(c)
+(c) Mean and Standard deviation of quantitative variables:
 
 ```{r}
 meansd <- function(x) {
@@ -69,14 +69,15 @@ apply(Auto[,1:8],MARGIN=2,FUN=meansd)
 ```
 
 
-(d)
+(d) Range, Mean and Standard deviation of quantitative variables in the subset:
 
 ```{r}
 AutoSubset <- Auto[-c(10:85),]
+apply(AutoSubset[,1:8],MARGIN=2,FUN=myr)
 apply(AutoSubset[,1:8],MARGIN=2,FUN=meansd)
 ```
 
-(e)
+(e) Relationship among predictors:
 ```{r}
 pairs(Auto)
 ```
