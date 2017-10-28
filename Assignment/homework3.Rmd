@@ -1,0 +1,316 @@
+---
+title: "Homework 3"
+author: "Bui Le Linh"
+date: '2017-10-25'
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
+```
+
+
+## Question 1 (Chapter 6, #8, parts (a)-(e), 10 marks)
+
+
+(a) (1 mark)
+(Note: You should set your random seed, for reproducibility.)
+```{r}
+set.seed(123)
+X <- rnorm(100)
+epsilon <- rnorm(100)
+```
+
+(b) (1 mark)
+```{r}
+beta0 <- 3
+beta1 <- 2
+beta2 <- -1
+beta3 <- 2
+Y <- beta0 + beta1*X + beta2*X^2 + beta3*X^3 + epsilon
+```
+
+(c) (3 marks)
+For the "best model obtained", you should 
+use one that is parsimonious and close to
+the consensus best according tht the three
+selection criteria.
+```{r}
+library(leaps)
+pmax <- 10
+n <- 100
+Xmat <- matrix(NA,nrow=n,ncol=pmax)
+for(i in 1:pmax) {
+  Xmat[,i] <- X^i
+}
+colnames(Xmat) <- paste0("X.",1:pmax)
+dat <- data.frame(Y,Xmat)
+
+mod.fit <- regsubsets(Y ~ ., data = dat, nvmax = 10)
+mod.summary <- summary(mod.fit)
+
+par(mfrow = c(2, 2))
+plot(mod.summary$cp, xlab = "Number of variables", ylab = "Mallows' Cp", type = "l")
+points(which.min(mod.summary$cp), mod.summary$cp[which.min(mod.summary$cp)], col = "red")
+plot(mod.summary$bic, xlab = "Number of variables", ylab = "BIC", type = "l")
+points(which.min(mod.summary$bic), mod.summary$bic[which.min(mod.summary$bic)], col = "red")
+plot(mod.summary$adjr2, xlab = "Number of variables", ylab = "Adjusted R^2", type = "l")
+points(which.max(mod.summary$adjr2), mod.summary$adjr2[which.max(mod.summary$adjr2)], col = "red")
+```
+
+Based on all criteria ($C_p$, BIC and Adjusted $R^2$), the 3-variable model is the best model that is parsimonious.
+
+Coefficient of the best model (with $X, X^2, X^3$):
+```{r}
+coef(mod.fit, 3)
+```
+
+
+(d) (2 marks)
+
+**Forward Stepwise Selection**
+```{r}
+mod.fwd <- regsubsets(Y ~ ., data = dat, nvmax = 10, method = "forward")
+fwd.summary <- summary(mod.fwd)
+
+par(mfrow = c(2, 2))
+plot(fwd.summary$cp, xlab = "Number of variables", ylab = "Mallows' Cp", type = "l")
+points(which.min(fwd.summary$cp), fwd.summary$cp[which.min(fwd.summary$cp)], col = "red")
+plot(fwd.summary$bic, xlab = "Number of variables", ylab = "BIC", type = "l")
+points(which.min(fwd.summary$bic), fwd.summary$bic[which.min(fwd.summary$bic)], col = "red")
+plot(fwd.summary$adjr2, xlab = "Number of variables", ylab = "Adjusted R^2", type = "l")
+points(which.max(fwd.summary$adjr2), fwd.summary$adjr2[which.max(fwd.summary$adjr2)], col = "red")
+```
+
+Using forward selection, we have the 3-variable model to be the best model that is parsimonious.
+
+Coefficient of the best model (with $X, X^2, X^3$):
+```{r}
+coef(mod.fwd, 3)
+```
+
+
+**Backward Stepwise Selection**
+```{r}
+mod.bwd <- regsubsets(Y ~ ., data = dat, nvmax = 10, method = "backward")
+bwd.summary <- summary(mod.bwd)
+
+par(mfrow = c(2, 2))
+plot(bwd.summary$cp, xlab = "Number of variables", ylab = "Mallows' Cp", type = "l")
+points(which.min(bwd.summary$cp), bwd.summary$cp[which.min(bwd.summary$cp)], col = "red")
+plot(bwd.summary$bic, xlab = "Number of variables", ylab = "BIC", type = "l")
+points(which.min(bwd.summary$bic), bwd.summary$bic[which.min(bwd.summary$bic)], col = "red")
+plot(bwd.summary$adjr2, xlab = "Number of variables", ylab = "Adjusted R^2", type = "l")
+points(which.max(bwd.summary$adjr2), bwd.summary$adjr2[which.max(bwd.summary$adjr2)], col = "red")
+```
+
+Using backward selection, we have the 4-variable model to be the best model that is parsimonious.
+Coefficient of the best model ((with $X, X^3, X^4, X^6$):
+```{r}
+coef(mod.bwd, 4)
+```
+
+
+(e) (3 marks)
+
+```{r}
+library(glmnet)
+lambdas <- 10^{seq(from=-2,to=5,length=100)}
+cv.lafit <- cv.glmnet(Xmat,Y,alpha=1,lambda=lambdas) 
+plot(cv.lafit)
+```
+
+Best lambda and corresponding coefficients:
+```{r}
+la.best.lam <- cv.lafit$lambda.min
+la.best.lam
+la.best.coef=predict(cv.lafit, type ="coefficients", s=la.best.lam)
+la.best.coef
+```
+
+$\lambda = 0.0599$ seems to result in model with the lowest cross-validation error. Alternatively, we can also select lambda.1se instead of lamda.min as the best lambda. The lambda.1se represents the value of $\lambda$ in the search that is simpler than the best model (lambda.min), but has error within 1 standard error of the best model.
+
+In this case, both lambda.1se and lamda.min result in model with 3 variables $X, X^2, X^3$ which have non-zero coefficient estimates. Coefficient estimates for remaining variables are shrinked to 0.
+
+## Question 2 (Ch6, #9, 12 marks)
+
+(a) (0 marks)
+To make everyone's results comparable, please
+select your test set with the following.
+
+```{r}
+library(ISLR)
+data(College)
+dim(College) # 777 rows, use 111 as test
+set.seed(1)
+testset <- sample(1:777,size=111)
+College.test <- College[testset,]
+College.train <- College[-testset,]
+```
+
+(b) (2 marks)
+```{r}
+mod.lm <- lm(Apps ~ ., data = College.train)
+pred.lm <- predict(mod.lm, College.test)
+mean((pred.lm - College.test$Apps)^2)
+```
+
+The least square linear regression model has test-error of 2,796,421.
+
+(c) (2 marks)
+```{r}
+library(glmnet)
+X.train <- model.matrix(Apps ~ ., data = College.train)
+X.test <- model.matrix(Apps ~ ., data = College.test)
+
+lambdas <- 10^{seq(from=-2,to=5,length=100)}
+cv.ridge <- cv.glmnet(X.train, College.train$Apps, alpha = 0, lambda = lambdas)
+lambda.best <- cv.ridge$lambda.min
+lambda.best
+```
+
+Test error of ridge regression model:
+```{r}
+pred.ridge <- predict(cv.ridge, s = lambda.best, newx = X.test)
+mean((pred.ridge - College.test$Apps)^2)
+```
+
+This is higher than test error of least square linear regression model.
+
+(d) (2 marks)
+```{r}
+cv.lasso <- cv.glmnet(X.train, College.train$Apps, alpha = 1, lambda = lambdas)
+lambda.best <- cv.lasso$lambda.min
+lambda.best
+```
+
+Test error of lasso regression model:
+```{r}
+pred.lasso <- predict(cv.lasso, s = lambda.best, newx = X.test)
+mean((pred.lasso - College.test$Apps)^2)
+predict(cv.lasso, s = lambda.best, type = "coefficients")
+```
+
+The lasso regression model has higher test error compared to that of least square and ridge regression models.
+There are 14 non-zero coefficient estimates (out of 17 variables).
+
+(e) (2 marks)
+```{r}
+library(pls)
+mod.pcr <- pcr(Apps ~ ., data = College.train, scale = TRUE, validation = "CV")
+summary(mod.pcr)
+validationplot(mod.pcr, val.type = "MSEP")
+```
+
+M = 16 and 17 correspond to model with the best cross validation error, but using that would mean almost no dimension reduction (i.e. the pcr model would be almost equipvalent to least square regression). We can see that from M = 9, there is hardly any improvement in cross validation error. Applying parsimoniously rule, we choose the best number of principal component chosen by cross validation to be 9.
+
+```{r}
+pred.pcr <- predict(mod.pcr, College.test, ncomp = 9)
+mean((pred.pcr - College.test$Apps)^2)
+```
+The principal component regression model has test-error of 7,435,118, which is much higher than previous models.
+
+(f) (2 marks)
+```{r}
+mod.pls <- plsr(Apps ~ ., data = College.train, scale = TRUE, validation = "CV")
+summary(mod.pls)
+validationplot(mod.pls, val.type = "MSEP")
+```
+
+The best M number of components chosen by cross validation is 9.
+
+```{r}
+pred.pls <- predict(mod.pls, College.test, ncomp = 9)
+mean((pred.pls - College.test$Apps)^2)
+```
+The partial least square regression model has test-error of 2,786,678, which is similar to least square regression model.
+
+(g) (2 marks)
+
+Looking at test error (Mean Square Error), we can see that:
+
+* Least square and partial least square regression models (with 9 components) have the best accuracy. With M=9 components, partial least square regression model perform better than least square model which uses 17 variables, probably because the 9 components identified in such supervised way generalize the data well. 
+* Ridge regression and Lasso regression have a little lower accuracy. This is probably because the decrease in variance is less than the increase in bias when we make the models less flexible using regularization. In this case, such trade-off is even more severe for Lasso which tries to yield a simpler model at the expense of higher bias.
+* Principal component regression model (with 9 components) have much lower accuracy. In this case, the components identified in an unsupervised way happen to perform badly at predicting the response variable, unless we select almost all components (16 or 17).
+
+
+## Question 3 (Ch7, #6, 8 marks)
+
+(a) (5 marks)
+```{r}
+library(ISLR)
+library(boot)
+set.seed(123)
+max_degree <- 10
+mse <- rep(NA, max_degree)
+for (i in 1:max_degree) {
+    mod.fit <- glm(wage ~ poly(age, i), data = Wage)
+    mse[i] <- cv.glm(Wage, mod.fit, K = 10)$delta[1]
+}
+plot(1:max_degree, mse, xlab = "Degree", ylab = "Test MSE", type = "l")
+d.min <- which.min(mse)
+points(d.min, mse[d.min], col = "red")
+```
+
+The optimal degree for the polinomial is d = 4.
+
+ANOVA:
+```{r}
+mod.poly1 <- lm(wage ~ age, data = Wage)
+mod.poly2 <- lm(wage ~ poly(age, 2), data = Wage)
+mod.poly3 <- lm(wage ~ poly(age, 3), data = Wage)
+mod.poly4 <- lm(wage ~ poly(age, 4), data = Wage)
+mod.poly5 <- lm(wage ~ poly(age, 5), data = Wage)
+anova(mod.poly1, mod.poly2, mod.poly3, mod.poly4, mod.poly5)
+```
+
+* The p-value comparing the linear Model 1 to the quadratic Model 2 is very small, indicating that a linear fit is not sufficient. The p-value comparing the quadratic Model 2 to the cubic Model 3 is also low (0.0017), so the quadratic fit is also insufficient.
+* The p-value comparing the cubic and degree-4 polynomial is about 0.05, indicating that adding degree-4 might also be justified.
+* The p-value comparing degree-4 polynomial and degree-5 polynomial is much higher than 0.05, indicating that degree-5 polynomial is unneccesary.
+
+Therefore, hypothesis test using ANOVA show that a cubic or a quartic polynomial appears to provide a reasonable fit to the data, but lower or higher order models are not justified. The result is, although not the same, still in agreement with d=4 selected using cross validation.
+
+Plot model fit:
+```{r}
+mod.poly4 <- lm(wage ~ poly(age, 4), data = Wage)
+
+plot(wage ~ age, data = Wage, col = "darkgrey")
+agelims <- range(Wage$age)
+age.grid <- seq(from = agelims[1], to = agelims[2])
+preds <- predict(mod.poly4, newdata = list(age = age.grid), se=TRUE)
+lines(age.grid, preds$fit, col = "red", lwd = 2)
+se.bands=cbind(preds$fit + 2* preds$se.fit, preds$fit -2* preds$se.fit)
+matlines(age.grid, se.bands, lwd=1, col="blue", lty =3)
+```
+
+(b) (3 marks)
+```{r}
+mse <- rep(NA, 10)
+for (i in 2:10) {
+    Wage$age.cut <- cut(Wage$age, i)
+    fit <- glm(wage ~ age.cut, data = Wage)
+    mse[i] <- cv.glm(Wage, fit, K = 10)$delta[1]
+}
+plot(2:10, mse[-1], xlab = "Cuts", ylab = "Test MSE", type = "l")
+d.min <- which.min(mse)
+points(d.min, mse[d.min], col = "red")
+```
+
+The optimal number of cut is 8.
+
+Plot model fit:
+```{r}
+mod.cut8 <- glm(wage ~ cut(age, 8), data = Wage)
+
+plot(wage ~ age, data = Wage, col = "darkgrey")
+agelims <- range(Wage$age)
+age.grid <- seq(from = agelims[1], to = agelims[2])
+preds <- predict(mod.cut8, newdata = list(age = age.grid), se=TRUE)
+lines(age.grid, preds$fit, col = "red", lwd = 2)
+se.bands=cbind(preds$fit + 2* preds$se.fit, preds$fit -2* preds$se.fit)
+matlines(age.grid, se.bands, lwd=1, col="blue", lty =3)
+```
+
+
