@@ -5,3 +5,5 @@
 3. Regression Spline and Generalized Addictive Model
 4. Decision Tree, Random Forest and Boosting
 5. Clustering and Dimension Reduction
+
+## Project: Predict diabetes based on diagnostic measurements
