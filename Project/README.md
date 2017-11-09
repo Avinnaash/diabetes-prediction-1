@@ -1,5 +1,5 @@
 ## Project: Predict diabetes based on diagnostic measurements
-* Analysis of [Pima Indians Diabetes Data Set](https://archive.ics.uci.edu/ml/datasets/pima+indians+diabetes) to predict diabetes based on diagnostic measurements using various statistical learning techniques (linear model, tree-based methods and support vector machine)
+* Analysis of [Pima Indians Diabetes Data Set](https://archive.ics.uci.edu/ml/datasets/pima+indians+diabetes) to predict diabetes based on diagnostic measurements using various statistical learning techniques (linear models, tree-based methods and support vector machine)
 * Implement an ROC curve interactive dashboard to show the optimal cut-off threshold based on a specific True Positive Rate or False Positive Rate criterion
 * Technologies: R, shinnyApp, ggplot2, glmet, MASS, gbm
 
