@@ -1,0 +1,260 @@
+---
+title: "STAT652 Project"
+author: "Bui Le Linh"
+date: '2017-12-12'
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
+```
+
+#Data Pre-processing and Exploration#
+```{r}
+#Read data
+Diab <- read.csv("pima-diabetes.csv")
+summary(Diab)
+```
+
+```{r}
+#Data Pre-processing
+Diab$Glucose[Diab$Glucose==0] <- median(Diab$Glucose)
+Diab$BloodPressure[Diab$BloodPressure==0] <- median(Diab$BloodPressure)
+Diab$Insulin[Diab$Insulin==0] <- median(Diab$Insulin)
+Diab$BMI[Diab$BMI==0] <- median(Diab$BMI)
+Diab$SkinThickness[Diab$SkinThickness==0] <- median(Diab$SkinThickness)
+
+Diab2 <- Diab #data used for boosting later since gbm cannot handle factor variable
+Diab$Outcome <- as.factor(Diab$Outcome)
+```
+
+```{r}
+#Correlation Plot
+library(corrplot)
+corr <- cor(Diab[, -9])
+corrplot(corr)
+```
+
+```{r}
+#Density Function for each predictor ~ Outcome
+library(ggplot2)
+source('multiplot.R')
+p1 <- ggplot(Diab,aes(x=Pregnancies,fill=Diab$Outcome))+geom_density(alpha=0.4)+scale_fill_manual(values=c("red", "blue"))+labs(title="Distribution of Pregnancies")
+
+p2 <- ggplot(Diab,aes(x=Glucose,fill=Diab$Outcome))+geom_density(alpha=0.4)+scale_fill_manual(values=c("red", "blue"))+labs(title="Distribution of Glucose")
+
+p3 <- ggplot(Diab,aes(x=BloodPressure,fill=Diab$Outcome))+geom_density(alpha=0.4)+scale_fill_manual(values=c("red", "blue"))+labs(title="Distribution of BloodPressure")
+
+p4 <- ggplot(Diab,aes(x=SkinThickness,fill=Diab$Outcome))+geom_density(alpha=0.4)+scale_fill_manual(values=c("red", "blue"))+labs(title="Distribution of SkinThickness")
+
+p5 <- ggplot(Diab,aes(x=Insulin,fill=Diab$Outcome))+geom_density(alpha=0.4)+scale_fill_manual(values=c("red", "blue"))+labs(title="Distribution of Insulin")
+
+p6 <- ggplot(Diab,aes(x=BMI,fill=Diab$Outcome))+geom_density(alpha=0.4)+scale_fill_manual(values=c("red", "blue"))+labs(title="Distribution of BMI")
+
+p7 <- ggplot(Diab,aes(x=DiabetesPedigreeFunction,fill=Diab$Outcome))+geom_density(alpha=0.4)+scale_fill_manual(values=c("red", "blue"))+labs(title="Distribution of DiabetesPedigreeFunction")
+
+p8 <- ggplot(Diab,aes(x=Age,fill=Diab$Outcome))+geom_density(alpha=0.4)+scale_fill_manual(values=c("red", "blue"))+labs(title="Distribution of Age")
+
+multiplot(p1, p2, p3, p4, p5, p6, p7, p8, cols=2)
+```
+
+```{r}
+#Box-plot for each predictor ~ Outcome
+p1 <- ggplot(Diab,aes(x=Outcome,y=Pregnancies,fill=Outcome))+geom_boxplot()+scale_fill_brewer(palette="RdBu")
+p2 <- ggplot(Diab,aes(x=Outcome,y=Glucose,fill=Outcome))+geom_boxplot()+scale_fill_brewer(palette="RdBu")
+p3 <- ggplot(Diab,aes(x=Outcome,y=BloodPressure,fill=Outcome))+geom_boxplot()+scale_fill_brewer(palette="RdBu")
+p4 <- ggplot(Diab,aes(x=Outcome,y=SkinThickness,fill=Outcome))+geom_boxplot()+scale_fill_brewer(palette="RdBu")
+p5 <- ggplot(Diab,aes(x=Outcome,y=Insulin,fill=Outcome))+geom_boxplot()+scale_fill_brewer(palette="RdBu")
+p6 <- ggplot(Diab,aes(x=Outcome,y=BMI,fill=Outcome))+geom_boxplot()+scale_fill_brewer(palette="RdBu")
+p7 <- ggplot(Diab,aes(x=Outcome,y=DiabetesPedigreeFunction,fill=Outcome))+geom_boxplot()+scale_fill_brewer(palette="RdBu")
+p8 <- ggplot(Diab,aes(x=Outcome,y=Age,fill=Outcome))+geom_boxplot()+scale_fill_brewer(palette="RdBu")
+multiplot(p1, p2, p3, p4, p5, p6, p7, p8, cols=2)
+```
+
+
+#Evaluation Criteria Definition#
+```{r}
+#Train-Test Split
+set.seed(13)
+library(caret)
+testset <- createDataPartition(Diab$Outcome, p = 0.2, list = FALSE)
+Diab.test <- Diab[testset,]
+Diab.train <- Diab[-testset,]
+```
+
+```{r}
+#AUC
+library(ROCR)
+caculate_auc <- function(probs) {
+  pred <- prediction(probs, Diab.test$Outcome)
+  auc.perf = performance(pred, measure = "auc")
+  return (auc.perf@y.values[[1]])
+}
+```
+
+
+#Statistical Modelling#
+```{r}
+#Logistics Regression
+mod.lm <- glm(Outcome ~ ., data = Diab.train, family = binomial(link='logit'))
+pred.probs = predict(mod.lm, Diab.test, type="response")
+auc.lm <- caculate_auc(pred.probs)
+```
+
+```{r}
+#Ridge logistics regression
+library(glmnet)
+X.train <- model.matrix(Outcome ~ ., data = Diab.train)
+X.test <- model.matrix(Outcome ~ ., data = Diab.test)
+
+lambdas <- 10^{seq(from=-2,to=5,length=100)}
+cv.ridge <- cv.glmnet(X.train, Diab.train$Outcome, alpha = 0, lambda = lambdas, standardize=TRUE, family="binomial")
+lambda.best <- cv.ridge$lambda.min
+pred.probs <- predict(cv.ridge, s = lambda.best, newx = X.test, type="response")
+auc.ridge <- caculate_auc(pred.probs)
+```
+
+```{r}
+#Lasso logistics regression
+lambdas <- 10^{seq(from=-2,to=5,length=100)}
+cv.lasso <- cv.glmnet(X.train, Diab.train$Outcome, alpha = 1, lambda = lambdas, standardize=TRUE, family="binomial")
+lambda.best <- cv.lasso$lambda.min
+pred.probs <- predict(cv.lasso, s = lambda.best, newx = X.test, type="response")
+auc.lasso <- caculate_auc(pred.probs)
+```
+
+```{r}
+#Linear Discriminant Analysis
+library(MASS)
+mod.lda <- lda(Outcome ~ ., data = Diab.train)
+pred.probs = predict(mod.lda, Diab.test, type="response")$posterior[ ,2]
+auc.lda <-caculate_auc(pred.probs)
+```
+
+```{r}
+#Quadric Discriminant Analysis
+mod.qda <- qda(Outcome ~ ., data = Diab.train)
+pred.probs = predict(mod.qda, Diab.test, type="response")$posterior[ ,2]
+auc.qda <- caculate_auc(pred.probs)
+```
+
+```{r}
+#Decision Tree
+library(rpart)
+mod.tree <- rpart(Outcome ~ ., data = Diab.train, method = "class")
+pred.probs <- predict(mod.tree, Diab.test, type="prob")[,2]
+auc.tree <-caculate_auc(pred.probs)
+#plot(mod.tree)
+#text(mod.tree)
+```
+
+```{r}
+#Linear Support Vector Machine
+library(e1071)
+tune.linear <- tune(svm, Outcome ~ ., data = Diab.train, kernel = "linear", probability=TRUE, scale=TRUE,
+                    ranges = list(cost = c(0.001, 0.01, 0.1, 1, 5, 10, 100)))
+svm.linear <- tune.linear$best.model
+pred.probs <- predict(svm.linear, Diab.test, type="response", probability=TRUE)
+pred.probs <- attr(pred.probs,"probabilities")[,2]
+auc.svm.linear <- caculate_auc(pred.probs)
+```
+
+```{r}
+#Kernel Support Vector Machine
+tune.radial <- tune(svm, Outcome ~ ., data = Diab.train, kernel = "radial", probability=TRUE, scale=TRUE,
+                    ranges = list(cost = c(0.001, 0.01, 0.1, 1, 5, 10, 100),
+                                  gamma = c(0.001, 0.01, 1, 5, 10, 100)))
+svm.radial <- tune.radial$best.model
+pred.probs <- predict(svm.radial, Diab.test, type="response", probability=TRUE)
+pred.probs <- attr(pred.probs,"probabilities")[,2]
+auc.svm.radial <-caculate_auc(pred.probs)
+```
+
+```{r}
+#Boosting
+library(gbm)
+Diab2.test <- Diab2[testset,]
+Diab2.train <- Diab2[-testset,]
+
+n.trees.list <- c(100, 500, 1000, 2000, 5000)
+cv.error.list <- rep(NA, length(n.trees.list))
+for (i in 1:length(n.trees.list)) {
+  mod.boost <- gbm(Outcome ~ ., data = Diab2.train, distribution = "bernoulli",
+                 cv.folds = 10, n.trees = n.trees.list[i], shrinkage = 0.01)
+  cv.error <- mod.boost$cv.error[gbm.perf(mod.boost, plot.it = FALSE, method="cv")]
+  cv.error.list[i] <- cv.error
+}
+n.trees.best <- n.trees.list[which.min(cv.error.list)]
+pred.probs = predict(mod.boost, Diab2.test, n.trees = n.trees.best, type="response")
+auc.boosting <- caculate_auc(pred.probs)
+```
+
+
+#Model Performance Summary#
+```{r}
+#Summary of model performance
+models <-c("Logistics Regression", "Ridge Regression", "Lasso Regression", 
+           "LDA", "QDA",
+           "Linear SVM", "Kernel SVM", "Decision Tree", "Boosting")
+auc.list <-c(auc.lm, auc.ridge, auc.lasso, auc.lda, auc.qda, auc.svm.linear, auc.svm.radial, auc.tree, auc.boosting)
+auc.df <- data.frame(models, auc.list)
+names(auc.df) <- c("Model", "AUC")
+print(auc.df)
+```
+
+```{r}
+#Confusion Matrix for the Logistics Regression model:
+pred.probs = predict(mod.lm, Diab.test, type="response")
+pred.label <- ifelse(pred.probs > 0.5, 1, 0)
+xtab <- table(pred.label, Diab.test$Outcome)
+confusionMatrix(xtab)
+```
+
+```{r}
+#ROC Curve for the Logistics Regression model:
+pred <- prediction(pred.probs, Diab.test$Outcome)
+perf <- performance(pred, "tpr", "fpr")
+plot(perf)
+abline(a=0, b= 1)
+title(paste("Logistic Regression - AUC:",round(auc.lm,4)))
+```
+
+```{r}
+# Save ROC data for interactive dashboard
+#save(perf, file = "shinyApp/perf.RData")
+```
+
+
+#Model Interpretation and Diagnosis#
+```{r}
+#Model Interpretation
+mod.fit <- glm(Outcome ~ ., data = Diab, family = binomial(link='logit'))
+summary(mod.fit)
+```
+
+```{r}
+#Goodness of fit
+source("AllGOFTests.R")
+HL <- HLTest(obj=mod.fit, g = 100)
+HL
+```
+
+```{r}
+#Outliers
+s.res = rstandard(mod.fit, type="pearson")
+s.res.beyond2 <- which(s.res > 2 | s.res < -2)
+paste("Number of observations with standardized residual beyond 2:", length(s.res.beyond2))
+
+s.res.beyond3 <- which(s.res > 3 | s.res < -3)
+paste("Number of observations with standardized residual beyond 3:", length(s.res.beyond3))
+```
+
+```{r}
+#Influence
+source("glmDiagnostics.R")
+influentials <- glmInflDiag(mod.fit = mod.fit, print.output=FALSE, which.plots = FALSE)
+paste("Number of influential points:", nrow(influentials))
+```
+

@@ -7,3 +7,6 @@
 5. Clustering and Dimension Reduction
 
 ## Project: Predict diabetes based on diagnostic measurements
+* Predict diabetes based on diagnostic measurements using various statistical learning techniques (linear model, tree-based methods and support vector machine)
+* Implement an ROC curve interactive dashboard to show the optimal cut-off threshold based on a specific True Positive Rate or False Positive Rate criterion
+* Technologies: R, shinnyApp, ggplot2, glmet, MASS, gbm
