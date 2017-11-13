@@ -126,6 +126,98 @@ auc.lasso <- caculate_auc(pred.probs)
 ```
 
 ```{r}
+#Generalized Addictive Models - Polynomial
+library(gam)
+choices <- c(1, 2, 3,4,5,6,7,8)
+parameters <- c(1,1,1,1,1,1,1,1)
+best_aic = mod.lm$aic
+for (i in c(1:8)) {
+  t_parameters <- parameters
+  for (k in choices) {
+    t_parameters[i] <- k
+    mod.gam <- glm(Outcome~poly(Pregnancies, t_parameters[1], raw=T) + poly(Glucose, t_parameters[2], raw=T)
+                   + poly(BloodPressure, t_parameters[3], raw=T) + poly(SkinThickness, t_parameters[4], raw=T)
+                   + poly(Insulin, t_parameters[5], raw=T) + poly(BMI, t_parameters[6], raw=T)
+                   + poly(DiabetesPedigreeFunction, t_parameters[7], raw=T) + poly(Age, t_parameters[8], raw=T),
+            data=Diab.train, family=binomial(link=logit)) 
+    gam.aic <- mod.gam$aic
+    
+    if (gam.aic < best_aic) {
+      best_aic <- gam.aic
+      parameters[i] <- k
+    }
+  }
+}
+parameters.poly <- parameters
+mod.gam.poly <- glm(Outcome~poly(Pregnancies, parameters.poly[1]) + poly(Glucose, parameters.poly[2]) + poly(BloodPressure, parameters.poly[3]) 
+              + poly(SkinThickness, parameters.poly[4]) + poly(Insulin, parameters.poly[5]) + poly(BMI, parameters.poly[6]) 
+              + poly(DiabetesPedigreeFunction, parameters.poly[7]) + poly(Age, parameters.poly[8]),
+            data=Diab.train, family=binomial(link=logit))
+pred.probs = predict(mod.gam.poly, Diab.test, type="response")
+auc.gam.poly <- caculate_auc(pred.probs)
+```
+
+```{r}
+#Generalized Addictive Models - B-splines
+choices <- c(1, 2, 3,4,5,6,7,8)
+parameters <- c(1,1,1,1,1,1,1,1)
+best_aic = mod.lm$aic
+for (i in c(1:8)) {
+  t_parameters <- parameters
+  for (k in choices) {
+    t_parameters[i] <- k
+    mod.gam <- gam(Outcome~bs(Pregnancies, t_parameters[1]) + bs(Glucose, t_parameters[2]) + bs(BloodPressure, t_parameters[3]) 
+              + bs(SkinThickness, t_parameters[4]) + bs(Insulin, t_parameters[5]) + bs(BMI, t_parameters[6]) 
+              + bs(DiabetesPedigreeFunction, t_parameters[7]) + bs(Age, t_parameters[8]),
+            data=Diab.train, family=binomial(link=logit)) 
+    gam.aic <- mod.gam$aic
+    
+    if (gam.aic < best_aic) {
+      best_aic <- gam.aic
+      parameters[i] <- k
+    }
+  }
+}
+parameters.bs <- parameters
+mod.gam.bs <- gam(Outcome~bs(Pregnancies, parameters.bs[1]) + bs(Glucose, parameters.bs[2]) + bs(BloodPressure, parameters.bs[3]) 
+              + bs(SkinThickness, parameters.bs[4]) + bs(Insulin, parameters.bs[5]) + bs(BMI, parameters.bs[6]) 
+              + bs(DiabetesPedigreeFunction, parameters.bs[7]) + bs(Age, parameters.bs[8]),
+            data=Diab.train, family=binomial(link=logit)) 
+pred.probs = predict(mod.gam.bs, Diab.test, type="response")
+auc.gam.bs <- caculate_auc(pred.probs)
+```
+
+```{r}
+#Generalized Addictive Models - Natural Splines
+choices <- c(1, 2, 3,4,5,6,7,8)
+parameters <- c(1,1,1,1,1,1,1,1)
+best_aic = mod.lm$aic
+for (i in c(1:8)) {
+  t_parameters <- parameters
+  for (k in choices) {
+    t_parameters[i] <- k
+    mod.gam <- gam(Outcome~ns(Pregnancies, t_parameters[1]) + ns(Glucose, t_parameters[2]) + ns(BloodPressure, t_parameters[3]) 
+              + ns(SkinThickness, t_parameters[4]) + ns(Insulin, t_parameters[5]) + ns(BMI, t_parameters[6]) 
+              + ns(DiabetesPedigreeFunction, t_parameters[7]) + ns(Age, t_parameters[8]),
+            data=Diab.train, family=binomial(link=logit)) 
+    gam.aic <- mod.gam$aic
+    
+    if (gam.aic < best_aic) {
+      best_aic <- gam.aic
+      parameters[i] <- k
+    }
+  }
+}
+parameters.ns <- parameters
+mod.gam.ns <- gam(Outcome~ns(Pregnancies, parameters.ns[1]) + ns(Glucose, parameters.ns[2]) + ns(BloodPressure, parameters.ns[3]) 
+              + ns(SkinThickness, parameters.ns[4]) + ns(Insulin, parameters.ns[5]) + ns(BMI, parameters.ns[6]) 
+              + ns(DiabetesPedigreeFunction, parameters.ns[7]) + ns(Age, parameters.ns[8]),
+            data=Diab.train, family=binomial(link=logit)) 
+pred.probs = predict(mod.gam.ns, Diab.test, type="response")
+auc.gam.ns <- caculate_auc(pred.probs)
+```
+
+```{r}
 #Linear Discriminant Analysis
 library(MASS)
 mod.lda <- lda(Outcome ~ ., data = Diab.train)
@@ -195,47 +287,51 @@ auc.boosting <- caculate_auc(pred.probs)
 #Model Performance Summary#
 ```{r}
 #Summary of model performance
-models <-c("Logistics Regression", "Ridge Regression", "Lasso Regression", 
+models <-c("Logistics Regression", "Ridge Regression", "Lasso Regression",
+           "GAM-poly", "GAM-bs", "GAM-ns",
            "LDA", "QDA",
            "Linear SVM", "Kernel SVM", "Decision Tree", "Boosting")
-auc.list <-c(auc.lm, auc.ridge, auc.lasso, auc.lda, auc.qda, auc.svm.linear, auc.svm.radial, auc.tree, auc.boosting)
+auc.list <-c(auc.lm, auc.ridge, auc.lasso, auc.gam.poly, auc.gam.bs, auc.gam.ns, auc.lda, auc.qda, auc.svm.linear, auc.svm.radial, auc.tree, auc.boosting)
 auc.df <- data.frame(models, auc.list)
 names(auc.df) <- c("Model", "AUC")
 print(auc.df)
 ```
 
 ```{r}
-#Confusion Matrix for the Logistics Regression model:
-pred.probs = predict(mod.lm, Diab.test, type="response")
+#Confusion Matrix for the best model:
+pred.probs = predict(mod.gam.poly, Diab.test, type="response")
 pred.label <- ifelse(pred.probs > 0.5, 1, 0)
 xtab <- table(pred.label, Diab.test$Outcome)
 confusionMatrix(xtab)
 ```
 
 ```{r}
-#ROC Curve for the Logistics Regression model:
+#ROC Curve for the best model:
 pred <- prediction(pred.probs, Diab.test$Outcome)
 perf <- performance(pred, "tpr", "fpr")
 plot(perf)
 abline(a=0, b= 1)
-title(paste("Logistic Regression - AUC:",round(auc.lm,4)))
+title(paste("Logistic Regression - AUC:",round(auc.gam.poly,4)))
 ```
 
 ```{r}
 # Save ROC data for interactive dashboard
-#save(perf, file = "shinyApp/perf.RData")
+save(perf, file = "shinyApp/perf.RData")
 ```
-
 
 #Model Interpretation and Diagnosis#
 ```{r}
-#Model Interpretation
-mod.fit <- glm(Outcome ~ ., data = Diab, family = binomial(link='logit'))
+#Model Parameters
+print(paste("Degrees", names(Diab.train)[-9], ":", parameters.poly))
+mod.fit <- glm(Outcome~poly(Pregnancies, parameters.poly[1]) + poly(Glucose, parameters.poly[2]) + poly(BloodPressure, parameters.poly[3]) 
+              + poly(SkinThickness, parameters.poly[4]) + poly(Insulin, parameters.poly[5]) + poly(BMI, parameters.poly[6]) 
+              + poly(DiabetesPedigreeFunction, parameters.poly[7]) + poly(Age, parameters.poly[8]),
+            data=Diab, family=binomial(link=logit))
 summary(mod.fit)
 ```
 
 ```{r}
-#Goodness of fit
+# Goodness of fit
 source("AllGOFTests.R")
 HL <- HLTest(obj=mod.fit, g = 100)
 HL
