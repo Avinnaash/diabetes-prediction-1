@@ -85,12 +85,14 @@ Diab.train <- Diab[-testset,]
 ```
 
 ```{r}
-#AUC
+#AUC and optimal accuracy
 library(ROCR)
 caculate_auc <- function(probs) {
   pred <- prediction(probs, Diab.test$Outcome)
   auc.perf = performance(pred, measure = "auc")
-  return (auc.perf@y.values[[1]])
+  perf <- performance(pred, "acc")
+  acc.perf <- max(perf@y.values[[1]])
+  return (c(auc.perf@y.values[[1]], acc.perf))
 }
 ```
 
@@ -291,16 +293,23 @@ models <-c("Logistics Regression", "Ridge Regression", "Lasso Regression",
            "GAM-poly", "GAM-bs", "GAM-ns",
            "LDA", "QDA",
            "Linear SVM", "Kernel SVM", "Decision Tree", "Boosting")
-auc.list <-c(auc.lm, auc.ridge, auc.lasso, auc.gam.poly, auc.gam.bs, auc.gam.ns, auc.lda, auc.qda, auc.svm.linear, auc.svm.radial, auc.tree, auc.boosting)
-auc.df <- data.frame(models, auc.list)
-names(auc.df) <- c("Model", "AUC")
+auc.list <-c(auc.lm[1], auc.ridge[1], auc.lasso[1], auc.gam.poly[1], auc.gam.bs[1], auc.gam.ns[1], auc.lda[1], auc.qda[1], auc.svm.linear[1], auc.svm.radial[1], auc.tree[1], auc.boosting[1])
+acc.list <-c(auc.lm[2], auc.ridge[2], auc.lasso[2], auc.gam.poly[2], auc.gam.bs[2], auc.gam.ns[2], auc.lda[2], auc.qda[2], auc.svm.linear[2], auc.svm.radial[2], auc.tree[2], auc.boosting[2])
+auc.df <- data.frame(models, auc.list, acc.list)
+names(auc.df) <- c("Model", "AUC", "Accuracy")
 print(auc.df)
 ```
 
 ```{r}
 #Confusion Matrix for the best model:
 pred.probs = predict(mod.gam.poly, Diab.test, type="response")
-pred.label <- ifelse(pred.probs > 0.5, 1, 0)
+pred <- prediction(pred.probs, Diab.test$Outcome)
+perf.acc <- performance(pred, "acc")
+cutoff.list <- unlist(perf.acc@x.values[[1]])
+optimal.cutoff <- cutoff.list[which.max(perf.acc@y.values[[1]])]
+print(paste("Optimal accuracy cut-off:", optimal.cutoff))
+
+pred.label <- ifelse(pred.probs >= optimal.cutoff, 1, 0)
 xtab <- table(pred.label, Diab.test$Outcome)
 confusionMatrix(xtab)
 ```
@@ -311,7 +320,7 @@ pred <- prediction(pred.probs, Diab.test$Outcome)
 perf <- performance(pred, "tpr", "fpr")
 plot(perf)
 abline(a=0, b= 1)
-title(paste("Logistic Regression - AUC:",round(auc.gam.poly,4)))
+title(paste("AUC:",round(auc.gam.poly[1],4)))
 ```
 
 ```{r}
